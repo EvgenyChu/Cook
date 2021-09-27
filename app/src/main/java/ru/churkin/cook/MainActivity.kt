@@ -35,7 +35,7 @@ class MainActivity : AppCompatActivity() {
                 FloatingActionButton(
                     modifier = Modifier.align(Alignment.BottomCenter),
 
-                    onClick = { viewModel.addOrder() }) {
+                    onClick = { viewModel.tugleDialog() }) {
                     Icon(
                         contentDescription = null,
                         painter = painterResource(id = R.drawable.ic_baseline_cake_24),

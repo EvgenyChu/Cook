@@ -36,8 +36,9 @@ class CookViewModel() : ViewModel() {
             orders.add(order)
             screenState.value = currentState.copy(title = newTitle, ordersState = OrdersState.Value(orders = orders.toList()))
         }
-
-
+    }
+    fun tugleDialog(){
+        screenState.value = currentState.copy(isOpenDialog = true)
     }
 }
 
@@ -63,8 +64,10 @@ data class Recept(
 data class HomeScreenState(
     val title: String = "Заказов пока нет",
     val ordersState: OrdersState = OrdersState.Empty,
-    val recepts: List<Recept>
+    val recepts: List<Recept>,
+    val isOpenDialog: Boolean = false
 )
+
 
 sealed class OrdersState{
     object Loading : OrdersState()

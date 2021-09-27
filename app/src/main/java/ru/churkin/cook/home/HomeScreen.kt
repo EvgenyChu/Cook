@@ -1,6 +1,5 @@
 package ru.churkin.cook.home
 
-import android.graphics.Paint
 import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -9,25 +8,17 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.*
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Shadow
-import androidx.compose.ui.semantics.Role.Companion.Button
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.text.style.TextDecoration
 
 @Composable
-fun HomeScreen(state: HomeScreenState) {
+fun HomeScreen(state: HomeScreenState, vm:CookViewModel) {
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -43,6 +34,39 @@ fun HomeScreen(state: HomeScreenState) {
                 color = Color.Black,
                 fontWeight = FontWeight.Normal
             )
+
+            if (state.isOpenDialog) {
+
+            AlertDialog(
+                onDismissRequest = {
+                    CookViewModel.tugleDialog = false
+                },
+                title = {
+                    Text(text = "Dialog Title")
+                },
+                text = {
+                    Text("Here is a text ")
+                },
+                confirmButton = {
+                    Button(
+
+                        onClick = {
+                            openDialog.value = false
+                        }) {
+                        Text("This is the Confirm Button")
+                    }
+                },
+                dismissButton = {
+                    Button(
+
+                        onClick = {
+                            openDialog.value = false
+                        }) {
+                        Text("This is the dismiss Button")
+                    }
+                }
+            )
+        }
 
             when (val listState = state.ordersState) {
                 is OrdersState.Empty -> {
@@ -72,7 +96,6 @@ fun HomeScreen(state: HomeScreenState) {
 
 @Composable
 fun OrderCard(order: Order, modifier: Modifier = Modifier) {
-    MaterialTheme {
         val typography = MaterialTheme.typography
         Card(
             elevation = 4.dp,
@@ -112,7 +135,7 @@ fun OrderCard(order: Order, modifier: Modifier = Modifier) {
                 )
                 Row() {
                     Spacer(modifier = Modifier.weight(1f))
-                    TextButton(onClick = { }) {
+                    TextButton(onClick = {}) {
                         Text("ПОДРОБНЕЕ",
                             textDecoration = TextDecoration.Underline)
                     }
@@ -120,4 +143,4 @@ fun OrderCard(order: Order, modifier: Modifier = Modifier) {
             }
         }
     }
-}
+
