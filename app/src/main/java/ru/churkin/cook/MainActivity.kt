@@ -26,12 +26,13 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+
         setContent {
             val state by viewModel.screenState.collectAsState()
 
             Log.e("STATE", "$state")
             Box(modifier = Modifier.fillMaxSize()) {
-                HomeScreen(state)
+                HomeScreen(state, viewModel)
                 FloatingActionButton(
                     modifier = Modifier.align(Alignment.BottomCenter),
 
@@ -133,15 +134,7 @@ class MainActivity : AppCompatActivity() {
 
 }
 
-@Preview
-@Composable
-fun preview() {
 
-
-    val order = Order(0, "KEKS", Date(), 100, 70, "Anna")
-
-    OrderCard(order = order)
-}
 
 
 

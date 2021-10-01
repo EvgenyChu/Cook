@@ -14,18 +14,16 @@ data class Order(
         private var lastId: Int = -1
 
         fun makeOrder(
-            recepts: List<Recept>
+            recept: Recept
         ): Order {
             lastId += 1
-            val number = (0..(recepts.size-1)).random()
-            val needRecept = recepts.find { it.number == number }
 
                 return Order(
                     id = lastId,
-                    dish = (needRecept!!.dish),
+                    dish = (recept.dish),
                     deadline = Date(),
-                    profit = (needRecept!!.costPrice * 0.3f).toInt(),
-                    price = (needRecept!!.costPrice * 1.3f).toInt(),
+                    profit = (recept.costPrice * 0.3f).toInt(),
+                    price = (recept.costPrice * 1.3f).toInt(),
                     customer = "Анна"
                 )
         }
