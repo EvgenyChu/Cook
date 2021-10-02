@@ -31,16 +31,7 @@ class MainActivity : AppCompatActivity() {
 
                 Box(modifier = Modifier.fillMaxSize()) {
                     HomeScreen(state, viewModel)
-                    FloatingActionButton(
-                        modifier = Modifier.align(Alignment.BottomCenter),
 
-                        onClick = { viewModel.toggleDialog() }) {
-                        Icon(
-                            contentDescription = null,
-                            painter = painterResource(id = R.drawable.ic_baseline_cake_24),
-                            tint = Color.White
-                        )
-                    }
                 }
             }
         }

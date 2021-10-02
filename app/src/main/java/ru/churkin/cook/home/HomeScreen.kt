@@ -12,13 +12,16 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.*
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import ru.churkin.cook.R
 import ru.churkin.cook.domain.Order
 import java.util.*
 
@@ -26,48 +29,71 @@ import java.util.*
 fun HomeScreen(state: HomeScreenState, vm: CookViewModel) {
 
     var isConfirm: Boolean by remember { mutableStateOf(false) }
+    var orderIdForRemove: Int? by remember { mutableStateOf(null) }
+    Box(modifier = Modifier.fillMaxSize()) {
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-    ) {
-        if (state.isOpenDialog) {
-            CreateOrderDialog(recepts = state.receptsName, vm)
-        }
-
-        if (isConfirm) {
-            ConfirmDialog()
-        }
-
-
-
-        when (val listState = state.ordersState) {
-            is OrdersState.Empty -> {
-                Text("Добавьте заказ", style = MaterialTheme.typography.body1)
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+        ) {
+            if (state.isOpenDialog) {
+                CreateOrderDialog(recepts = state.receptsName, vm)
             }
-            is OrdersState.Loading -> {
-                Text("Loading...", style = MaterialTheme.typography.body1)
-            }
-            is OrdersState.Value -> {
-                Log.e("UI", "${listState.orders}")
-                listState.orders
-                    .forEach {
-                        OrderCard(order = it, onRemove = { orderId ->
-                            vm.removeOrder(orderId)
-                        })
+
+            if (isConfirm) {
+                ConfirmDialog(
+                    onDismiss = {
+                        isConfirm = false
+                        orderIdForRemove = null
+                    },
+                    onConfirmRemove = {
+                        vm.removeOrder(orderIdForRemove!!)
                     }
+                )
             }
-            is OrdersState.ValueWithMessage -> {
-                listState.orders
-                    .forEach {
-                        OrderCard(order = it, onRemove = { orderId ->
-                            vm.removeOrder(orderId)
-                            isConfirm = true
-                        })
-                    }
-                CircularProgressIndicator(color = MaterialTheme.colors.primary, strokeWidth = 5.dp)
+
+            when (val listState = state.ordersState) {
+                is OrdersState.Empty -> {
+                    Text("Добавьте заказ", style = MaterialTheme.typography.body1)
+                }
+                is OrdersState.Loading -> {
+                    Text("Loading...", style = MaterialTheme.typography.body1)
+                }
+                is OrdersState.Value -> {
+                    Log.e("UI", "${listState.orders}")
+                    listState.orders
+                        .forEach {
+                            OrderCard(order = it, onRemove = { orderId ->
+                                isConfirm = true
+                                orderIdForRemove = orderId
+                            })
+                        }
+                }
+                is OrdersState.ValueWithMessage -> {
+                    listState.orders
+                        .forEach {
+                            OrderCard(order = it, onRemove = { orderId ->
+                                isConfirm = true
+                                orderIdForRemove = orderId
+                            })
+                        }
+                    CircularProgressIndicator(
+                        color = MaterialTheme.colors.primary,
+                        strokeWidth = 5.dp
+                    )
+                }
             }
+        }
+        FloatingActionButton(
+            modifier = Modifier.align(Alignment.BottomCenter),
+
+            onClick = { vm.toggleDialog() }) {
+            Icon(
+                contentDescription = null,
+                painter = painterResource(id = R.drawable.ic_baseline_cake_24),
+                tint = Color.White
+            )
         }
     }
 }
@@ -106,8 +132,9 @@ fun CreateOrderDialog(recepts: List<String>, vm: CookViewModel) {
 
                 Row(
                     horizontalArrangement = Arrangement.End,
-                    modifier = Modifier.fillMaxWidth()
-                        .padding(16.dp)
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(8.dp)
                 ) {
                     TextButton(onClick = { vm.toggleDialog() }) {
                         Text("Отмена", color = MaterialTheme.colors.secondary)
@@ -176,21 +203,28 @@ fun OrderCard(order: Order, modifier: Modifier = Modifier, onRemove: (orderId: I
 }
 
 @Composable
-fun ConfirmDialog() {
-    AlertDialog(title = {
-        Text(text = "Вы точно хотите удалить заказ?")
-    },
-        buttons = {
-            TextButton(onClick = {}) {
-                Text(text = "Отмена")
-
-            }
-            TextButton(onClick = {}) {
+fun ConfirmDialog(onDismiss: () -> Unit, onConfirmRemove: () -> Unit) {
+    AlertDialog(
+        title = {
+            Text(text = "Вы точно хотите удалить заказ?")
+        },
+        confirmButton = {
+            TextButton(onClick = {
+                onConfirmRemove()
+                onDismiss()
+            }) {
                 Text(text = "Удалить")
 
             }
         },
-        onDismissRequest = {})
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(text = "Отмена")
+
+            }
+        },
+        onDismissRequest = onDismiss
+    )
 }
 
 @Preview
@@ -210,5 +244,5 @@ fun preview1() {
 
     val order = Order(0, "KEKS", Date(), 100, 70, "Anna")
 
-    ConfirmDialog()
+    ConfirmDialog({}, {})
 }
