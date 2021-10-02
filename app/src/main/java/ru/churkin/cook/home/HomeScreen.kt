@@ -2,12 +2,14 @@ package ru.churkin.cook.home
 
 import android.util.Log
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment.Companion.CenterVertically
@@ -17,15 +19,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import ru.churkin.cook.domain.Order
 import java.util.*
 
 @Composable
 fun HomeScreen(state: HomeScreenState, vm: CookViewModel) {
 
-    val typography = MaterialTheme.typography
-    var isComfirm = remember {
-        mutableStateOf(false)
-    }
+    var isConfirm: Boolean by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -33,11 +33,10 @@ fun HomeScreen(state: HomeScreenState, vm: CookViewModel) {
             .verticalScroll(rememberScrollState())
     ) {
         if (state.isOpenDialog) {
-
             CreateOrderDialog(recepts = state.receptsName, vm)
         }
 
-        if(isComfirm.value){
+        if (isConfirm) {
             ConfirmDialog()
         }
 
@@ -45,16 +44,16 @@ fun HomeScreen(state: HomeScreenState, vm: CookViewModel) {
 
         when (val listState = state.ordersState) {
             is OrdersState.Empty -> {
-                Text("Добавьте заказ", style = typography.body1)
+                Text("Добавьте заказ", style = MaterialTheme.typography.body1)
             }
             is OrdersState.Loading -> {
-                Text("Loading...", style = typography.body1)
+                Text("Loading...", style = MaterialTheme.typography.body1)
             }
             is OrdersState.Value -> {
                 Log.e("UI", "${listState.orders}")
                 listState.orders
                     .forEach {
-                        OrderCard(order = it, onRemove = {orderId ->
+                        OrderCard(order = it, onRemove = { orderId ->
                             vm.removeOrder(orderId)
                         })
                     }
@@ -62,9 +61,9 @@ fun HomeScreen(state: HomeScreenState, vm: CookViewModel) {
             is OrdersState.ValueWithMessage -> {
                 listState.orders
                     .forEach {
-                        OrderCard(order = it,  onRemove = {orderId ->
+                        OrderCard(order = it, onRemove = { orderId ->
                             vm.removeOrder(orderId)
-                            isComfirm.value = true
+                            isConfirm = true
                         })
                     }
                 CircularProgressIndicator(color = MaterialTheme.colors.primary, strokeWidth = 5.dp)
@@ -74,38 +73,45 @@ fun HomeScreen(state: HomeScreenState, vm: CookViewModel) {
 }
 
 @Composable
-fun CreateOrderDialog(recepts: List<String>, vm:CookViewModel) {
+fun CreateOrderDialog(recepts: List<String>, vm: CookViewModel) {
     Dialog(
         onDismissRequest = {
-            vm.tugleDialog()
+            vm.toggleDialog()
         })
     {
-        Surface(shape = RoundedCornerShape(10.dp)) {
+        Surface(shape = RoundedCornerShape(4.dp)) {
             Column(
                 modifier = Modifier
-                    .padding(all = 10.dp)
+                    .padding(top = 16.dp)
                     .fillMaxWidth()
             ) {
+                Text(
+                    text = "Выберите рецепт",
+                    style = MaterialTheme.typography.h6,
+                    modifier = Modifier.padding(horizontal = 16.dp)
+                )
+
                 recepts.forEach { label ->
+
                     Row(verticalAlignment = CenterVertically,
                         modifier = Modifier
-//                                    .clickable { Log.e("HomeScreen", "$label")}
+                            .clickable { vm.addOrder(label) }
                             .height(44.dp)
-
+                            .padding(horizontal = 16.dp)
                             .fillMaxWidth()
-//                                .clickable { /**/ }
                     ) {
-                        TextButton(onClick = { vm.addOrder(label) }) {
-
-                            Text(text = label)
-                        }
-
+                        Text(text = label)
                     }
                 }
-                Button(onClick = {
-                    vm.tugleDialog()
-                }) {
-                    Text("Отмена")
+
+                Row(
+                    horizontalArrangement = Arrangement.End,
+                    modifier = Modifier.fillMaxWidth()
+                        .padding(16.dp)
+                ) {
+                    TextButton(onClick = { vm.toggleDialog() }) {
+                        Text("Отмена", color = MaterialTheme.colors.secondary)
+                    }
                 }
             }
         }
@@ -113,8 +119,7 @@ fun CreateOrderDialog(recepts: List<String>, vm:CookViewModel) {
 }
 
 @Composable
-fun OrderCard(order: Order, modifier: Modifier = Modifier, onRemove : (orderId : Int)->Unit) {
-    val typography = MaterialTheme.typography
+fun OrderCard(order: Order, modifier: Modifier = Modifier, onRemove: (orderId: Int) -> Unit) {
     Card(
         elevation = 4.dp,
         modifier = modifier
@@ -128,17 +133,16 @@ fun OrderCard(order: Order, modifier: Modifier = Modifier, onRemove : (orderId :
             Text(
                 text = order.dish,
                 color = Color.Blue,
-                style = typography.h5,
-                //                   fontSize = 20.sp,
+                style = MaterialTheme.typography.h5,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(horizontal = 10.dp)
             )
             Text(
-                text = "${order.deadline.format()}",
+                text = order.deadline.format(),
                 color = Color.Gray,
 //                    fontSize = 16.sp,
                 fontWeight = FontWeight.Light,
-                style = typography.body1,
+                style = MaterialTheme.typography.body1,
                 modifier = Modifier.padding(horizontal = 10.dp, vertical = 10.dp)
             )
             Text(
@@ -146,7 +150,7 @@ fun OrderCard(order: Order, modifier: Modifier = Modifier, onRemove : (orderId :
                 color = Color.Black,
 //                    fontSize = 16.sp,
                 fontWeight = FontWeight.Light,
-                style = typography.body2,
+                style = MaterialTheme.typography.body2,
                 modifier = Modifier
                     .background(Color.Yellow, RoundedCornerShape(10.dp))
                     .padding(horizontal = 20.dp, vertical = 5.dp)
@@ -158,14 +162,12 @@ fun OrderCard(order: Order, modifier: Modifier = Modifier, onRemove : (orderId :
                 }) {
                     Text(
                         "УДАЛИТЬ",
-//                        textDecoration = TextDecoration.Underline
                     )
                 }
                 Spacer(modifier = Modifier.weight(1f))
                 TextButton(onClick = {}) {
                     Text(
                         "ПОДРОБНЕЕ",
-//                        textDecoration = TextDecoration.Underline
                     )
                 }
             }
@@ -174,15 +176,15 @@ fun OrderCard(order: Order, modifier: Modifier = Modifier, onRemove : (orderId :
 }
 
 @Composable
-fun ConfirmDialog (){
+fun ConfirmDialog() {
     AlertDialog(title = {
-                        Text(text = "Вы точно хотите удалить заказ?")
+        Text(text = "Вы точно хотите удалить заказ?")
     },
         buttons = {
-                  TextButton(onClick = {}) {
-                      Text(text = "Отмена")
+            TextButton(onClick = {}) {
+                Text(text = "Отмена")
 
-                  }
+            }
             TextButton(onClick = {}) {
                 Text(text = "Удалить")
 

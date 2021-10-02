@@ -1,4 +1,4 @@
-package ru.churkin.cook.home
+package ru.churkin.cook.domain
 
 enum class Dish {
     ТОРТ, ПИРОЖНОЕ, ЭКЛЕР
