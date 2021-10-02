@@ -1,5 +1,6 @@
-package ru.churkin.cook.home
+package ru.churkin.cook.domain
 
+import ru.churkin.cook.home.Recept
 import java.util.*
 
 data class Order(
