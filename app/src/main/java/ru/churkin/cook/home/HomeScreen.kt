@@ -56,7 +56,6 @@ fun HomeScreen(state: HomeScreenState, vm: CookViewModel) {
                     .forEach {
                         OrderCard(order = it, onRemove = {orderId ->
                             vm.removeOrder(orderId)
-                            isComfirm.value = true
                         })
                     }
             }
