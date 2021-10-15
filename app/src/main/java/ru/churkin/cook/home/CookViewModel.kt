@@ -12,12 +12,17 @@ import java.util.*
 class CookViewModel() : ViewModel() {
     val days: List<WorkDay> = emptyList()
 
+
     private val orders: MutableList<Order> = mutableListOf()
 
     private val recepts: List<Recept> = listOf(
-        Recept(0, "Торт", listOf("мука", "яйца", "сахар"), 3000),
-        Recept(1, "Пирожное", listOf("мука", "яйца", "сахар", "крем"), 250),
-        Recept(2, "Эклер", listOf("мука", "яйца", "сахар", "лимон"), 150)
+        Recept(0, "Торт", listOf("мука", "яйца", "сахар"), 500),
+        Recept(1, "Пирожное", listOf("мука", "яйца", "сахар", "крем"), 100),
+        Recept(2, "Эклеры", listOf("мука", "яйца", "сахар", "лимон"), 200),
+        Recept(3, "Капкейки", listOf("мука", "яйца", "сахар", "лимон"), 300),
+        Recept(4, "Кекс", listOf("мука", "яйца", "сахар", "лимон"), 600),
+        Recept(5, "Безе", listOf("мука", "яйца", "сахар", "лимон"), 100),
+        Recept(6, "Мусовый торт", listOf("мука", "яйца", "сахар", "лимон"), 670)
     )
 
 
@@ -34,39 +39,55 @@ class CookViewModel() : ViewModel() {
         )
     }
 
-    fun removeOrder(id: Int) {
+    fun removeOrder() {
+        val id = currentState.orderIdForRemove
     Log.e("CookViewModel", "$id for remove")
         val ind = orders.indexOfFirst { it.id == id }
         orders.removeAt(ind)
         screenState.value = currentState.copy(
-            ordersState = OrdersState.Value(orders.toList()),
-        )
+            ordersState = OrdersState.Value(orders.sortedBy { it.deadline }),
+            orderIdForRemove = null,
+            isConfirm = false)
+            if (orders.size==0){
+                screenState.value = currentState.copy(
+                    ordersState = OrdersState.Empty,
+                    orderIdForRemove = null,
+                    isConfirm = false
+                )}
     }
 
-    fun addOrder(dish: String) {
-        Log.e("CookViewModel", "$dish")
-        val recept = recepts.find { it.dish == dish }
+    fun addOrder(isSelected: Int, customer: String, deadLineOffset: Float) {
+        val recept = recepts.find { it.isSelected == isSelected }
         checkNotNull(recept) { "recept must be not null" }
-        val order = Order.makeOrder(recept)
-
+        val order = Order.makeOrder(recept, deadlineOffset = deadLineOffset.toInt(), customer = customer)
         val newTitle = if (orders.size > 1) "Заказы" else "Заказ"
 
         viewModelScope.launch {
             screenState.value = currentState.copy(
-                ordersState = OrdersState.ValueWithMessage(orders.toList()),
+                ordersState = OrdersState.ValueWithMessage(orders.sortedBy { it.deadline }),
                 isOpenDialog = !currentState.isOpenDialog
             )
             delay(3000)
             orders.add(order)
             screenState.value = currentState.copy(
                 title = newTitle,
-                ordersState = OrdersState.Value(orders = orders.toList())
+                ordersState = OrdersState.Value(orders = orders.sortedBy { it.deadline })
             )
         }
     }
 
     fun toggleDialog() {
         screenState.value = currentState.copy(isOpenDialog = !currentState.isOpenDialog)
+    }
+
+    fun warningDialog() {
+        screenState.value = currentState.copy(isConfirm = !currentState.isConfirm)
+    }
+    fun showRemoveDialog(orderIdForRemove: Int?){
+        screenState.value = currentState.copy(isConfirm = true, orderIdForRemove = orderIdForRemove)
+    }
+    fun showEmptyDialog(orderIdForRemove: Int?){
+        screenState.value = currentState.copy(isConfirm = false, ordersState = OrdersState.Empty)
     }
 }
 
@@ -81,7 +102,7 @@ enum class WeekDay {
 
 
 data class Recept(
-    val number: Int,
+    val isSelected: Int,
     val dish: String,
     val indigrients: List<String> = emptyList(),
     val costPrice: Int
@@ -91,7 +112,9 @@ data class HomeScreenState(
     val title: String = "Заказов пока нет",
     val ordersState: OrdersState = OrdersState.Empty,
     val receptsName: List<String>,
-    val isOpenDialog: Boolean = false
+    val isOpenDialog: Boolean = false,
+    val isConfirm: Boolean = false,
+    val orderIdForRemove: Int? = null
 )
 
 
@@ -101,4 +124,5 @@ sealed class OrdersState {
     data class Value(val orders: List<Order>) : OrdersState()
     data class ValueWithMessage(val orders: List<Order>, val message: String = "Any message") :
         OrdersState()
+
 }

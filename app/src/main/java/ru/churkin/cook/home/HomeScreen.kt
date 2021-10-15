@@ -1,6 +1,7 @@
 package ru.churkin.cook.home
 
 import android.util.Log
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -28,8 +29,6 @@ import java.util.*
 @Composable
 fun HomeScreen(state: HomeScreenState, vm: CookViewModel) {
 
-    var isConfirm: Boolean by remember { mutableStateOf(false) }
-    var orderIdForRemove: Int? by remember { mutableStateOf(null) }
     Box(modifier = Modifier.fillMaxSize()) {
 
         Column(
@@ -41,14 +40,13 @@ fun HomeScreen(state: HomeScreenState, vm: CookViewModel) {
                 CreateOrderDialog(recepts = state.receptsName, vm)
             }
 
-            if (isConfirm) {
+            if (state.isConfirm) {
                 ConfirmDialog(
                     onDismiss = {
-                        isConfirm = false
-                        orderIdForRemove = null
+                        vm.warningDialog()
                     },
                     onConfirmRemove = {
-                        vm.removeOrder(orderIdForRemove!!)
+                        vm.removeOrder()
                     }
                 )
             }
@@ -65,8 +63,7 @@ fun HomeScreen(state: HomeScreenState, vm: CookViewModel) {
                     listState.orders
                         .forEach {
                             OrderCard(order = it, onRemove = { orderId ->
-                                isConfirm = true
-                                orderIdForRemove = orderId
+                                vm.showRemoveDialog(orderId)
                             })
                         }
                 }
@@ -74,8 +71,7 @@ fun HomeScreen(state: HomeScreenState, vm: CookViewModel) {
                     listState.orders
                         .forEach {
                             OrderCard(order = it, onRemove = { orderId ->
-                                isConfirm = true
-                                orderIdForRemove = orderId
+                                vm.showRemoveDialog(orderId)
                             })
                         }
                     CircularProgressIndicator(
@@ -100,12 +96,20 @@ fun HomeScreen(state: HomeScreenState, vm: CookViewModel) {
 
 @Composable
 fun CreateOrderDialog(recepts: List<String>, vm: CookViewModel) {
+
+    var isSelected by remember { mutableStateOf(-1) }
+    var customer by remember {mutableStateOf("")}
+    var sliderValue by remember { mutableStateOf(0f) }
+
     Dialog(
         onDismissRequest = {
             vm.toggleDialog()
         })
     {
-        Surface(shape = RoundedCornerShape(4.dp)) {
+        Surface(
+            shape = RoundedCornerShape(4.dp),
+        modifier = Modifier.verticalScroll(rememberScrollState()))
+        {
             Column(
                 modifier = Modifier
                     .padding(top = 16.dp)
@@ -117,11 +121,15 @@ fun CreateOrderDialog(recepts: List<String>, vm: CookViewModel) {
                     modifier = Modifier.padding(horizontal = 16.dp)
                 )
 
-                recepts.forEach { label ->
-
+                recepts.forEachIndexed{ number, label ->
+                    val backgroundColor by animateColorAsState(if (isSelected==number) Color.Red
+                    else Color.Transparent)
                     Row(verticalAlignment = CenterVertically,
                         modifier = Modifier
-                            .clickable { vm.addOrder(label) }
+                            .clickable (onClick = {
+                                if(isSelected == number){ isSelected = -1}
+                                else { isSelected = number }} )
+                            .background(color = backgroundColor)
                             .height(44.dp)
                             .padding(horizontal = 16.dp)
                             .fillMaxWidth()
@@ -130,12 +138,48 @@ fun CreateOrderDialog(recepts: List<String>, vm: CookViewModel) {
                     }
                 }
 
+                Row(modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(8.dp)){}
+
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    TextField(
+                        value = customer,
+                        {customer = it},
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(8.dp)
+                            .background(color = Color.Transparent),
+                        textStyle = MaterialTheme.typography.h6,
+                        placeholder = { Text("ФИО заказчика") }
+                    )
+                }
+
+                Row(modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(8.dp)){}
+
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Slider(
+                        value = sliderValue,
+                        valueRange = 0f..7f,
+                        steps = 6,
+                        modifier = Modifier.padding(8.dp),
+                        onValueChange = { sliderValue = it })
+                    Text("Дней до сдачи заказа ${sliderValue.toInt()}")
+                }
                 Row(
-                    horizontalArrangement = Arrangement.End,
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(8.dp)
                 ) {
+                            TextButton(onClick = { if (isSelected!=-1) vm.addOrder(isSelected,
+                                customer = customer,
+                                deadLineOffset = sliderValue) else  { vm.toggleDialog() }})
+                            {
+                        Text("Добавить", color = MaterialTheme.colors.secondary)
+                    }
+                    Spacer(modifier = Modifier.weight(1f))
                     TextButton(onClick = { vm.toggleDialog() }) {
                         Text("Отмена", color = MaterialTheme.colors.secondary)
                     }
@@ -154,7 +198,8 @@ fun OrderCard(order: Order, modifier: Modifier = Modifier, onRemove: (orderId: I
             .fillMaxWidth()
     ) {
         Column(
-            modifier = Modifier.padding(all = 10.dp)
+            modifier = Modifier
+                .padding(all = 10.dp)
         ) {
 
             Text(
@@ -164,8 +209,20 @@ fun OrderCard(order: Order, modifier: Modifier = Modifier, onRemove: (orderId: I
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(horizontal = 10.dp)
             )
+
+            order.customer?.let {
+                Text(
+                    text = it,
+                    color = Color.Gray,
+        //                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Light,
+                    style = MaterialTheme.typography.body1,
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 10.dp)
+                )
+            }
+
             Text(
-                text = order.deadline.format(),
+                text = ("DeadLine ${order.deadline.format()}"),
                 color = Color.Gray,
 //                    fontSize = 16.sp,
                 fontWeight = FontWeight.Light,
@@ -211,16 +268,13 @@ fun ConfirmDialog(onDismiss: () -> Unit, onConfirmRemove: () -> Unit) {
         confirmButton = {
             TextButton(onClick = {
                 onConfirmRemove()
-                onDismiss()
             }) {
                 Text(text = "Удалить")
-
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
                 Text(text = "Отмена")
-
             }
         },
         onDismissRequest = onDismiss
