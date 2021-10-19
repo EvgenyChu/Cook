@@ -2,12 +2,9 @@ package ru.churkin.cook.home
 
 import android.util.Log
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.*
@@ -16,19 +13,22 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavController
 import ru.churkin.cook.R
 import ru.churkin.cook.domain.Order
 import java.util.*
 
 @Composable
-fun HomeScreen(state: HomeScreenState, vm: CookViewModel) {
-
+fun HomeScreen(navController:NavController,  vm: HomeViewModel = viewModel()) {
+    val state by vm.screenState.collectAsState()
     Box(modifier = Modifier.fillMaxSize()) {
 
         Column(
@@ -53,7 +53,18 @@ fun HomeScreen(state: HomeScreenState, vm: CookViewModel) {
 
             when (val listState = state.ordersState) {
                 is OrdersState.Empty -> {
-                    Text("Добавьте заказ", style = MaterialTheme.typography.body1)
+                    Text("Добавьте заказ", style = MaterialTheme.typography.h5)
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(8.dp)
+                    ) {
+                        Image(
+                            painter = painterResource(R.drawable.cake_start),
+                            contentDescription = null,
+                            Modifier.clip(RoundedCornerShape(20))
+                        )
+                    }
                 }
                 is OrdersState.Loading -> {
                     Text("Loading...", style = MaterialTheme.typography.body1)
@@ -84,7 +95,10 @@ fun HomeScreen(state: HomeScreenState, vm: CookViewModel) {
         FloatingActionButton(
             modifier = Modifier.align(Alignment.BottomCenter),
 
-            onClick = { vm.toggleDialog() }) {
+            onClick = {
+//                navController.popBackStack()
+                vm.toggleDialog()
+            }) {
             Icon(
                 contentDescription = null,
                 painter = painterResource(id = R.drawable.ic_baseline_cake_24),
@@ -95,10 +109,10 @@ fun HomeScreen(state: HomeScreenState, vm: CookViewModel) {
 }
 
 @Composable
-fun CreateOrderDialog(recepts: List<String>, vm: CookViewModel) {
+fun CreateOrderDialog(recepts: List<String>, vm: HomeViewModel) {
 
-    var isSelected by remember { mutableStateOf(-1) }
-    var customer by remember {mutableStateOf("")}
+    var selectedDishes: List<String> by remember { mutableStateOf(listOf()) }
+    var customer by remember { mutableStateOf("") }
     var sliderValue by remember { mutableStateOf(0f) }
 
     Dialog(
@@ -108,7 +122,7 @@ fun CreateOrderDialog(recepts: List<String>, vm: CookViewModel) {
     {
         Surface(
             shape = RoundedCornerShape(4.dp),
-        modifier = Modifier.verticalScroll(rememberScrollState()))
+        )
         {
             Column(
                 modifier = Modifier
@@ -120,32 +134,63 @@ fun CreateOrderDialog(recepts: List<String>, vm: CookViewModel) {
                     style = MaterialTheme.typography.h6,
                     modifier = Modifier.padding(horizontal = 16.dp)
                 )
+                Column(
+                    modifier = Modifier
+                        .height(220.dp)
+                        .verticalScroll(rememberScrollState())
+                ) {
+                    recepts.forEach { label ->
+                        val backgroundColor by animateColorAsState(
+                            if (selectedDishes.contains(label)) Color.Red
+                            else Color.Transparent
+                        )
+                        Row(
+                            verticalAlignment = CenterVertically,
+                            modifier = Modifier
+                                .clickable(onClick = {
+                                    if (selectedDishes.contains(label)) {
+//                                    val newList =  selectedDishes.toMutableList()
+//                                        newList.remove(label)
+//                                       selectedDishes = newList.toList()
 
-                recepts.forEachIndexed{ number, label ->
-                    val backgroundColor by animateColorAsState(if (isSelected==number) Color.Red
-                    else Color.Transparent)
-                    Row(verticalAlignment = CenterVertically,
-                        modifier = Modifier
-                            .clickable (onClick = {
-                                if(isSelected == number){ isSelected = -1}
-                                else { isSelected = number }} )
-                            .background(color = backgroundColor)
-                            .height(44.dp)
-                            .padding(horizontal = 16.dp)
-                            .fillMaxWidth()
-                    ) {
-                        Text(text = label)
+
+                                        selectedDishes
+                                            .toMutableList()
+                                            .also {
+                                                it.remove(label)
+                                                selectedDishes = it
+                                            }
+                                    } else {
+                                        selectedDishes
+                                            .toMutableList()
+                                            .also {
+                                                it.add(label)
+                                                selectedDishes = it
+                                            }
+                                    }
+                                    Log.e("HomeScreen", "$selectedDishes $label")
+                                })
+                                .background(color = backgroundColor)
+                                .height(44.dp)
+                                .padding(horizontal = 16.dp)
+                                .fillMaxWidth()
+                        ) {
+                            Text(text = label)
+                        }
                     }
                 }
 
-                Row(modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(8.dp)){}
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(8.dp)
+                ) {}
 
                 Column(modifier = Modifier.fillMaxWidth()) {
                     TextField(
                         value = customer,
-                        {customer = it},
+                        { customer = it },
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(8.dp)
@@ -155,9 +200,11 @@ fun CreateOrderDialog(recepts: List<String>, vm: CookViewModel) {
                     )
                 }
 
-                Row(modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(8.dp)){}
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(8.dp)
+                ) {}
 
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Slider(
@@ -173,15 +220,23 @@ fun CreateOrderDialog(recepts: List<String>, vm: CookViewModel) {
                         .fillMaxWidth()
                         .padding(8.dp)
                 ) {
-                            TextButton(onClick = { if (isSelected!=-1) vm.addOrder(isSelected,
-                                customer = customer,
-                                deadLineOffset = sliderValue) else  { vm.toggleDialog() }})
-                            {
-                        Text("Добавить", color = MaterialTheme.colors.secondary)
-                    }
-                    Spacer(modifier = Modifier.weight(1f))
+
                     TextButton(onClick = { vm.toggleDialog() }) {
                         Text("Отмена", color = MaterialTheme.colors.secondary)
+                    }
+                    Spacer(modifier = Modifier.weight(1f))
+                    TextButton(
+                        onClick = {
+                            vm.addOrder(
+                                selectedDishes,
+                                customer = customer,
+                                deadLineOffset = sliderValue
+                            )
+                        },
+                        enabled = selectedDishes.isNotEmpty()
+                    )
+                    {
+                        Text("Добавить", color = MaterialTheme.colors.secondary)
                     }
                 }
             }
@@ -203,7 +258,7 @@ fun OrderCard(order: Order, modifier: Modifier = Modifier, onRemove: (orderId: I
         ) {
 
             Text(
-                text = order.dish,
+                text = order.dishes.toString(),
                 color = Color.Blue,
                 style = MaterialTheme.typography.h5,
                 fontWeight = FontWeight.Bold,
@@ -214,7 +269,7 @@ fun OrderCard(order: Order, modifier: Modifier = Modifier, onRemove: (orderId: I
                 Text(
                     text = it,
                     color = Color.Gray,
-        //                    fontSize = 16.sp,
+                    //                    fontSize = 16.sp,
                     fontWeight = FontWeight.Light,
                     style = MaterialTheme.typography.body1,
                     modifier = Modifier.padding(horizontal = 10.dp, vertical = 10.dp)
@@ -286,7 +341,7 @@ fun ConfirmDialog(onDismiss: () -> Unit, onConfirmRemove: () -> Unit) {
 fun preview() {
 
 
-    val order = Order(0, "KEKS", Date(), 100, 70, "Anna")
+    val order = Order(0, listOf("KEKS", "Cake"), Date(), 100, 70, "Anna")
 
     OrderCard(order = order, onRemove = {})
 }
@@ -296,7 +351,7 @@ fun preview() {
 fun preview1() {
 
 
-    val order = Order(0, "KEKS", Date(), 100, 70, "Anna")
+    val order = Order(0, listOf("KEKS", "Cake"), Date(), 100, 70, "Anna")
 
     ConfirmDialog({}, {})
 }

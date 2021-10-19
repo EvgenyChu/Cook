@@ -9,7 +9,7 @@ import kotlinx.coroutines.launch
 import ru.churkin.cook.domain.Order
 import java.util.*
 
-class CookViewModel() : ViewModel() {
+class HomeViewModel() : ViewModel() {
     val days: List<WorkDay> = emptyList()
 
 
@@ -56,10 +56,9 @@ class CookViewModel() : ViewModel() {
                 )}
     }
 
-    fun addOrder(isSelected: Int, customer: String, deadLineOffset: Float) {
-        val recept = recepts.find { it.isSelected == isSelected }
-        checkNotNull(recept) { "recept must be not null" }
-        val order = Order.makeOrder(recept, deadlineOffset = deadLineOffset.toInt(), customer = customer)
+    fun addOrder(selectedDishes: List<String>, customer: String, deadLineOffset: Float) {
+        val recepts = recepts.filter { selectedDishes.contains(it.dish)}
+        val order = Order.makeOrder(recepts, deadlineOffset = deadLineOffset.toInt(), customer = customer)
         val newTitle = if (orders.size > 1) "Заказы" else "Заказ"
 
         viewModelScope.launch {
