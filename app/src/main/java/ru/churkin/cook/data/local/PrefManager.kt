@@ -6,6 +6,7 @@ import android.util.Log
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
 import ru.churkin.cook.App
+import ru.churkin.cook.domain.Ingridient
 import ru.churkin.cook.domain.Order
 import ru.churkin.cook.recepts.Recept
 
@@ -81,4 +82,32 @@ object PrefManager {
             .apply()
     }
 
+    fun insertIngridient(ingridient: Ingridient) {
+        val ingridients = loadIngridients().plus(ingridient)
+        val str = Json.encodeToString(ListSerializer(Ingridient.serializer()), ingridients)
+
+        prefs.edit()
+            .putString("MY_INGRIDIENTS", str)
+            .apply()
+    }
+
+    fun loadIngridients(): List<Ingridient> {
+        val str = prefs.getString("MY_INGRIDIENTS", null)
+
+        str ?: return emptyList()
+        val ingridients = Json.decodeFromString(ListSerializer(Ingridient.serializer()), str)
+        return ingridients
+    }
+
+    fun removeIngridient(id: Int) {
+        val curIngridients = loadIngridients()
+
+        val index = curIngridients.indexOfFirst { it.id == id }
+        val ingridients = curIngridients.toMutableList()
+        ingridients.removeAt(index)
+        val str = Json.encodeToString(ListSerializer(Ingridient.serializer()), ingridients)
+        prefs.edit()
+            .putString("MY_INGRIDIENTS", str)
+            .apply()
+    }
 }

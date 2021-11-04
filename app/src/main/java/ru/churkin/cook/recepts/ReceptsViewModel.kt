@@ -1,17 +1,12 @@
 package ru.churkin.cook.recepts
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import ru.churkin.cook.data.repositories.ReceptsRepository
-import ru.churkin.cook.domain.Dish
-import ru.churkin.cook.domain.Order
-import ru.churkin.cook.home.OrdersState
 
-class ReceptsViewModel(): ViewModel() {
+class ReceptsViewModel() : ViewModel() {
 
     val repository: ReceptsRepository = ReceptsRepository()
 
@@ -46,33 +41,35 @@ class ReceptsViewModel(): ViewModel() {
     }
 
     fun toggleReceptDialog() {
-        screenState.value = currentState.copy(isOpenDialog = !currentState.isOpenDialog)
+        screenState.value = currentState.copy(isCreateDialog = !currentState.isCreateDialog)
+    }
+
+    fun hideCreateDialog() {
+        screenState.value = currentState.copy(isCreateDialog = false)
     }
 
     fun showCreateDialog() {
-        screenState.value = currentState.copy(isOpenDialog = true)
+        screenState.value = currentState.copy(isCreateDialog = true)
     }
 
-    fun showRemoveDialog(receptIdForRemove: Int?){
-        screenState.value = currentState.copy(isConfirm = true, receptIdForRemove = receptIdForRemove)
+    fun showRemoveDialog(receptIdForRemove: Int?) {
+        screenState.value =
+            currentState.copy(isConfirm = true, receptIdForRemove = receptIdForRemove)
     }
 
     fun addRecept(addDish: String, addIndigrients: String) {
         val recept = Recept.makeRecept(addDish = addDish, addIndigrients = addIndigrients)
-        val newTitle = if (repository.countRecepts() > 1) "Рецепты" else "Рецепт"
+        Log.e("ReceptsViewModel", "new rec $recept")
+        repository.insertRecept(recept)
+        val recepts = repository.loadRecepts().sortedBy { it.id }
+        Log.e("ReceptsViewModel", "all recepts $recepts")
 
-        viewModelScope.launch {
-            screenState.value = currentState.copy(
-                receptsState = ReceptsState.ValueWithMessage(repository.loadRecepts().sortedBy { it.id }),
-                isOpenDialog = !currentState.isOpenDialog
-            )
-            delay(3000)
-            repository.insertRecept(recept)
-            screenState.value = currentState.copy(
-                title = newTitle,
-                receptsState = ReceptsState.Value(recepts = repository.loadRecepts().sortedBy { it.id })
-            )
-        }
+        val newTitle = if (recepts.size > 1) "Рецепты" else "Рецепт"
+        screenState.value = currentState.copy(
+            title = newTitle,
+            receptsState = ReceptsState.Value(recepts),
+            isCreateDialog = false
+        )
     }
 
     fun removeRecept() {
@@ -81,13 +78,15 @@ class ReceptsViewModel(): ViewModel() {
         screenState.value = currentState.copy(
             receptsState = ReceptsState.Value(repository.loadRecepts().sortedBy { it.id }),
             receptIdForRemove = null,
-            isConfirm = false)
-        if (repository.isEmptyRecepts()){
+            isConfirm = false
+        )
+        if (repository.isEmptyRecepts()) {
             screenState.value = currentState.copy(
                 receptsState = ReceptsState.Empty,
                 receptIdForRemove = null,
                 isConfirm = false
-            )}
+            )
+        }
     }
 
 }
@@ -96,7 +95,7 @@ data class ReceptsScreenState(
     val title: String = "Рецепты",
     val recepts: List<Recept>,
     val receptsState: ReceptsState = ReceptsState.Empty,
-    val isOpenDialog: Boolean = false,
+    val isCreateDialog: Boolean = false,
     val isConfirm: Boolean = false,
     val receptIdForRemove: Int? = null
 )

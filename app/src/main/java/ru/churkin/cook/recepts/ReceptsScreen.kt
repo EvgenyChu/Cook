@@ -16,7 +16,6 @@ import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import ru.churkin.cook.R
-import ru.churkin.cook.home.*
 
 @Composable
 fun ReceptCard(recept: Recept, modifier: Modifier = Modifier, onRemove: (receptId: Int) -> Unit) {
@@ -70,9 +69,9 @@ fun ReceptCard(recept: Recept, modifier: Modifier = Modifier, onRemove: (receptI
 }
 
 @Composable
-fun ReceptsScreen(navController: NavController, rm: ReceptsViewModel = viewModel()) {
-    val state by rm.screenState.collectAsState()
-    Box(modifier = Modifier.fillMaxSize()){
+fun ReceptsScreen(navController: NavController, vm: ReceptsViewModel = viewModel()) {
+    val state by vm.screenState.collectAsState()
+    Box(modifier = Modifier.fillMaxSize()) {
         Column(
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -82,20 +81,20 @@ fun ReceptsScreen(navController: NavController, rm: ReceptsViewModel = viewModel
         ) {
             Text(state.title)
 
-            if (state.isOpenDialog) {
-                CreateReceptDialog(rm = ReceptsViewModel())
+            if (state.isCreateDialog) {
+                CreateReceptDialog(onDismiss = {vm.hideCreateDialog()}, onCreate = {dish, ing ->vm.addRecept(dish, ing)})
             }
 
-            if (state.isConfirm) {
+            /*if (state.isConfirm) {
                 ConfirmReceptDialog(
                     onDismiss = {
-                        rm.warningDialog()
+                        vm.warningDialog()
                     },
                     onConfirmRemove = {
-                        rm.removeRecept()
+                        vm.removeRecept()
                     }
                 )
-            }
+            }*/
 
             when (val listState = state.receptsState) {
                 is ReceptsState.Empty -> {
@@ -119,7 +118,7 @@ fun ReceptsScreen(navController: NavController, rm: ReceptsViewModel = viewModel
                     listState.recepts
                         .forEach {
                             ReceptCard(recept = it, onRemove = { orderId ->
-                                rm.showRemoveDialog(orderId)
+                                vm.showRemoveDialog(orderId)
                             })
                         }
                 }
@@ -127,7 +126,7 @@ fun ReceptsScreen(navController: NavController, rm: ReceptsViewModel = viewModel
                     listState.recepts
                         .forEach {
                             ReceptCard(recept = it, onRemove = { receptId ->
-                                rm.showRemoveDialog(receptId)
+                                vm.showRemoveDialog(receptId)
                             })
                         }
                 }
@@ -136,8 +135,7 @@ fun ReceptsScreen(navController: NavController, rm: ReceptsViewModel = viewModel
         FloatingActionButton(
             modifier = Modifier.align(Alignment.BottomCenter),
             onClick = {
-//                navController.popBackStack()
-                rm.toggleReceptDialog()
+                vm.showCreateDialog()
             }) {
             Icon(
                 contentDescription = null,
@@ -149,35 +147,29 @@ fun ReceptsScreen(navController: NavController, rm: ReceptsViewModel = viewModel
 }
 
 @Composable
-fun CreateReceptDialog(rm: ReceptsViewModel) {
+fun CreateReceptDialog(
+    onDismiss: () -> Unit,
+    onCreate: (addDish: String, addIndigrients: String) -> Unit
+) {
     var addDish by remember { mutableStateOf("") }
     var addIndigrients by remember { mutableStateOf("") }
-    Dialog(
-        onDismissRequest = {
-            rm.toggleReceptDialog()
-        })
-    {
+    Dialog(onDismissRequest = onDismiss) {
         Surface(
             shape = RoundedCornerShape(4.dp),
-        )
-        {
+        ) {
             Column(
                 modifier = Modifier
                     .padding(top = 16.dp)
                     .fillMaxWidth()
             ) {
+
                 Text(
                     text = "Добавьте рецепт",
                     style = MaterialTheme.typography.h6,
                     modifier = Modifier.padding(horizontal = 16.dp)
                 )
 
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(8.dp)
-                ) {}
-
+                Spacer(modifier = Modifier.height(16.dp))
                 Column(modifier = Modifier.fillMaxWidth()) {
                     TextField(
                         value = addDish,
@@ -191,16 +183,12 @@ fun CreateReceptDialog(rm: ReceptsViewModel) {
                     )
                 }
 
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(8.dp)
-                ) {}
+                Spacer(modifier = Modifier.height(16.dp))
 
                 Column(modifier = Modifier.fillMaxWidth()) {
                     TextField(
                         value = addIndigrients,
-                        { addIndigrients = it},
+                        { addIndigrients = it },
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(8.dp)
@@ -215,15 +203,15 @@ fun CreateReceptDialog(rm: ReceptsViewModel) {
                         .padding(8.dp)
                 ) {
 
-                    TextButton(onClick = { rm.toggleReceptDialog() }) {
+                    TextButton(onClick = onDismiss) {
                         Text("Отмена", color = MaterialTheme.colors.secondary)
                     }
                     Spacer(modifier = Modifier.weight(1f))
                     TextButton(
                         onClick = {
-                            rm.addRecept(
-                                addDish = addDish,
-                                addIndigrients = addIndigrients
+                            onCreate(
+                                addDish,
+                                addIndigrients
                             )
                         },
                         enabled = addDish.isNotEmpty()

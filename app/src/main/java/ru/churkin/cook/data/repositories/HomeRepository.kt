@@ -12,17 +12,8 @@ class HomeRepository() {
         orders.addAll(prefs.loadOrders())
     }
 
-    private val recepts: List<Recept> = listOf(
-        Recept(0, "Торт", "мука, яйца, сахар", 500),
-        Recept(1, "Пирожное", "мука, яйца, сахар, крем", 100),
-        Recept(2, "Эклеры", "мука, яйца, сахар, лимон", 200),
-        Recept(3, "Капкейки", "мука, яйца, сахар, лимон", 300),
-        Recept(4, "Кекс", "мука, яйца, сахар, лимон", 600),
-        Recept(5, "Безе", "мука, яйца, сахар, лимон", 100),
-        Recept(6, "Мусовый торт", "мука, яйца, сахар, лимон", 670)
-    )
 
-    fun loadRecepts() = recepts
+    fun loadRecepts() = prefs.loadRecepts()
     fun loadOrders(): List<Order> = orders
     fun insertOrder(order: Order) {
 

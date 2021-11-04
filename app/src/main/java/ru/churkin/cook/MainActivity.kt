@@ -12,17 +12,19 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.navigation.NavDestination.Companion.hierarchy
-import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
+import ru.churkin.cook.data.indigrients.IngridientsScreen
 import ru.churkin.cook.home.*
 import ru.churkin.cook.recepts.ReceptsScreen
 
 val screens = listOf(
     Screen.Home,
     Screen.Recepts,
+    Screen.Ingridients
 )
 
 class MainActivity : AppCompatActivity() {
@@ -33,16 +35,37 @@ class MainActivity : AppCompatActivity() {
 
         setContent {
             val navController = rememberNavController()
+
             AppTheme {
                 Scaffold(
+                    topBar = {
+                        TopAppBar(
+                            title = {
+                                Text(
+                                    navController.currentDestination?.label?.toString() ?: "Appbar",
+                                    color = MaterialTheme.colors.onPrimary
+                                )
+                            },
+                        )
+                    },
                     bottomBar = {
                         BottomNavigation {
                             val navBackStackEntry by navController.currentBackStackEntryAsState()
                             val currentDestination = navBackStackEntry?.destination
                             screens.forEach { screen ->
                                 BottomNavigationItem(
-                                    icon = { Icon(painterResource(id = screen.icon), contentDescription = null) },
-                                    label = { Text(screen.title, color = MaterialTheme.colors.onPrimary) },
+                                    icon = {
+                                        Icon(
+                                            painterResource(id = screen.icon),
+                                            contentDescription = null
+                                        )
+                                    },
+                                    label = {
+                                        Text(
+                                            screen.title,
+                                            color = MaterialTheme.colors.onPrimary
+                                        )
+                                    },
                                     selected = currentDestination?.hierarchy?.any { it.route == screen.route } == true,
                                     onClick = {
                                         navController.navigate(screen.route)
@@ -52,9 +75,19 @@ class MainActivity : AppCompatActivity() {
                         }
                     }
                 ) { innerPadding ->
-                    NavHost(navController, startDestination = Screen.Home.route, Modifier.padding(innerPadding)) {
-                        composable(Screen.Home.route) { HomeScreen(navController) }
+                    NavHost(
+                        navController,
+                        startDestination = Screen.Home.route,
+                        Modifier.padding(innerPadding)
+                    ) {
+                        composable(
+                            Screen.Home.route,
+                            arguments = listOf(navArgument("title") {
+                                defaultValue = Screen.Home.title
+                            })
+                        ) { HomeScreen(navController) }
                         composable(Screen.Recepts.route) { ReceptsScreen(navController) }
+                        composable(Screen.Ingridients.route) { IngridientsScreen(navController) }
                     }
                 }
 
@@ -65,9 +98,10 @@ class MainActivity : AppCompatActivity() {
 
 }
 
-sealed class Screen(val route: String, @DrawableRes val icon: Int, val title:String) {
+sealed class Screen(val route: String, @DrawableRes val icon: Int, val title: String) {
     object Home : Screen("home", R.drawable.ic_baseline_cake_24, "Заказы")
     object Recepts : Screen("recepts", R.drawable.ic_baseline_construction_24, "Рецепты")
+    object Ingridients : Screen("ingridients", R.drawable.ic_baseline_add_24, "Ингредиенты")
 }
 
 

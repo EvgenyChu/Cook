@@ -17,17 +17,16 @@ class ReceptsRepository {
     )
 
     init {
+        recepts.clear()
         recepts.addAll(prefs.loadRecepts())
     }
 
 
     fun loadRecepts(): List<Recept> = recepts
     fun insertRecept(recept: Recept) {
-
-
-
-        if (recepts.find { it.id == recept.id } != null) return
-        recepts.add(recept)
+//        if (recepts.find { it.id == recept.id } != null) return
+        val newInd = recepts.size+1
+        recepts.add(recept.copy(id = newInd))
         prefs.insertRecept(recept)
     }
 
