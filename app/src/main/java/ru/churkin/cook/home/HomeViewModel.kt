@@ -6,24 +6,12 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
+import ru.churkin.cook.data.repositories.HomeRepository
 import ru.churkin.cook.domain.Order
 import java.util.*
 
 class HomeViewModel() : ViewModel() {
-    val days: List<WorkDay> = emptyList()
-
-
-    private val orders: MutableList<Order> = mutableListOf()
-
-    private val recepts: List<Recept> = listOf(
-        Recept(0, "Торт", listOf("мука", "яйца", "сахар"), 500),
-        Recept(1, "Пирожное", listOf("мука", "яйца", "сахар", "крем"), 100),
-        Recept(2, "Эклеры", listOf("мука", "яйца", "сахар", "лимон"), 200),
-        Recept(3, "Капкейки", listOf("мука", "яйца", "сахар", "лимон"), 300),
-        Recept(4, "Кекс", listOf("мука", "яйца", "сахар", "лимон"), 600),
-        Recept(5, "Безе", listOf("мука", "яйца", "сахар", "лимон"), 100),
-        Recept(6, "Мусовый торт", listOf("мука", "яйца", "сахар", "лимон"), 670)
-    )
+    val repository: HomeRepository = HomeRepository()
 
 
     val screenState = MutableStateFlow(initialState())
@@ -33,61 +21,75 @@ class HomeViewModel() : ViewModel() {
 
 
     private fun initialState(): HomeScreenState {
+        val orders = repository.loadOrders()
+        val ordersState = if (orders.isEmpty()) OrdersState.Empty
+        else OrdersState.Value(orders = orders.sortedBy { it.deadline })
 
         return HomeScreenState(
-            receptsName = recepts.map { it.dish }
+            receptsName = repository.loadRecepts().map { it.dish },
+            ordersState = ordersState
         )
     }
 
     fun removeOrder() {
         val id = currentState.orderIdForRemove
-    Log.e("CookViewModel", "$id for remove")
-        val ind = orders.indexOfFirst { it.id == id }
-        orders.removeAt(ind)
+        repository.removeOrder(id)
+
+        val orders = repository.loadOrders()
+        val ordersState = if (orders.isEmpty()) OrdersState.Empty
+        else OrdersState.Value(orders = orders.sortedBy { it.deadline })
+
         screenState.value = currentState.copy(
-            ordersState = OrdersState.Value(orders.sortedBy { it.deadline }),
+            ordersState = ordersState,
             orderIdForRemove = null,
-            isConfirm = false)
-            if (orders.size==0){
-                screenState.value = currentState.copy(
-                    ordersState = OrdersState.Empty,
-                    orderIdForRemove = null,
-                    isConfirm = false
-                )}
+            isConfirmDialog = false
+        )
+
     }
 
     fun addOrder(selectedDishes: List<String>, customer: String, deadLineOffset: Float) {
-        val recepts = recepts.filter { selectedDishes.contains(it.dish)}
-        val order = Order.makeOrder(recepts, deadlineOffset = deadLineOffset.toInt(), customer = customer)
-        val newTitle = if (orders.size > 1) "Заказы" else "Заказ"
+        val needRecepts = repository.loadRecepts().filter { selectedDishes.contains(it.dish) }
+        val order =  Order.makeOrder(
+                needRecepts,
+                deadlineOffset = deadLineOffset.toInt(),
+                customer = customer
+            )
+        val newTitle = if (repository.countOrders() > 1) "Заказы" else "Заказ"
 
         viewModelScope.launch {
             screenState.value = currentState.copy(
-                ordersState = OrdersState.ValueWithMessage(orders.sortedBy { it.deadline }),
-                isOpenDialog = !currentState.isOpenDialog
+                ordersState = OrdersState.ValueWithMessage(
+                    repository.loadOrders().sortedBy { it.deadline }),
+                isCreateDialog = !currentState.isCreateDialog
             )
             delay(3000)
-            orders.add(order)
+            repository.insertOrder(order)
             screenState.value = currentState.copy(
                 title = newTitle,
-                ordersState = OrdersState.Value(orders = orders.sortedBy { it.deadline })
+                ordersState = OrdersState.Value(
+                    orders = repository.loadOrders().sortedBy { it.deadline })
             )
         }
     }
 
-    fun toggleDialog() {
-        screenState.value = currentState.copy(isOpenDialog = !currentState.isOpenDialog)
+    fun showCreateDialog() {
+        screenState.value = currentState.copy(isCreateDialog = true)
     }
 
-    fun warningDialog() {
-        screenState.value = currentState.copy(isConfirm = !currentState.isConfirm)
+    fun hideCreateDialog() {
+        screenState.value = currentState.copy(isCreateDialog = false)
     }
-    fun showRemoveDialog(orderIdForRemove: Int?){
-        screenState.value = currentState.copy(isConfirm = true, orderIdForRemove = orderIdForRemove)
+
+
+    fun showConfirmDialog(orderIdForRemove: Int) {
+        screenState.value =
+            currentState.copy(isConfirmDialog = true, orderIdForRemove = orderIdForRemove)
     }
-    fun showEmptyDialog(orderIdForRemove: Int?){
-        screenState.value = currentState.copy(isConfirm = false, ordersState = OrdersState.Empty)
+
+    fun hideConfirmDialog() {
+        screenState.value = currentState.copy(isConfirmDialog = false, orderIdForRemove = null)
     }
+
 }
 
 class WorkDay(
@@ -100,22 +102,14 @@ enum class WeekDay {
 }
 
 
-data class Recept(
-    val isSelected: Int,
-    val dish: String,
-    val indigrients: List<String> = emptyList(),
-    val costPrice: Int
-)
-
 data class HomeScreenState(
     val title: String = "Заказов пока нет",
     val ordersState: OrdersState = OrdersState.Empty,
     val receptsName: List<String>,
-    val isOpenDialog: Boolean = false,
-    val isConfirm: Boolean = false,
+    val isCreateDialog: Boolean = false,
+    val isConfirmDialog: Boolean = false,
     val orderIdForRemove: Int? = null
 )
-
 
 sealed class OrdersState {
     object Loading : OrdersState()
@@ -125,3 +119,4 @@ sealed class OrdersState {
         OrdersState()
 
 }
+

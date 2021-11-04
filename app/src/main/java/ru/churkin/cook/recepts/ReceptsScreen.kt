@@ -1,38 +1,265 @@
 package ru.churkin.cook.recepts
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material.Button
-import androidx.compose.material.ButtonDefaults
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.foundation.*
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import ru.churkin.cook.home.HomeViewModel
-import ru.churkin.cook.home.HomeScreenState
-
+import ru.churkin.cook.R
+import ru.churkin.cook.home.*
 
 @Composable
-fun ReceptsScreen(navController: NavController, vm: ReceptsViewModel = viewModel()) {
-    val state by vm.screenState.collectAsState()
-    Column(
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.fillMaxSize()
+fun ReceptCard(recept: Recept, modifier: Modifier = Modifier, onRemove: (receptId: Int) -> Unit) {
+    Card(
+        elevation = 4.dp,
+        modifier = modifier
+            .padding(all = 10.dp)
+            .fillMaxWidth()
     ) {
-        Text(state.title)
+        Column(
+            modifier = Modifier
+                .padding(all = 10.dp)
+        ) {
 
+            Text(
+                text = recept.dish,
+                color = Color.Blue,
+                style = MaterialTheme.typography.h5,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(horizontal = 10.dp)
+            )
 
-        Button(onClick = { navController.navigate("home") }) {
-            Text("К заказам", color = MaterialTheme.colors.onPrimary)
+            Text(
+                text = "${recept.costPrice}  руб.",
+                color = Color.Black,
+//                    fontSize = 16.sp,
+                fontWeight = FontWeight.Light,
+                style = MaterialTheme.typography.body2,
+                modifier = Modifier
+                    .background(Color.Yellow, RoundedCornerShape(10.dp))
+                    .padding(horizontal = 20.dp, vertical = 5.dp)
+            )
+            Row() {
+                TextButton(onClick = {
+                    onRemove(recept.id)
+
+                }) {
+                    Text(
+                        "УДАЛИТЬ",
+                    )
+                }
+                Spacer(modifier = Modifier.weight(1f))
+                TextButton(onClick = {}) {
+                    Text(
+                        "ПОДРОБНЕЕ",
+                    )
+                }
+            }
         }
     }
-
-
 }
+
+@Composable
+fun ReceptsScreen(navController: NavController, rm: ReceptsViewModel = viewModel()) {
+    val state by rm.screenState.collectAsState()
+    Box(modifier = Modifier.fillMaxSize()){
+        Column(
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+        ) {
+            Text(state.title)
+
+            if (state.isOpenDialog) {
+                CreateReceptDialog(rm = ReceptsViewModel())
+            }
+
+            if (state.isConfirm) {
+                ConfirmReceptDialog(
+                    onDismiss = {
+                        rm.warningDialog()
+                    },
+                    onConfirmRemove = {
+                        rm.removeRecept()
+                    }
+                )
+            }
+
+            when (val listState = state.receptsState) {
+                is ReceptsState.Empty -> {
+                    Text("Добавьте рецепт", style = MaterialTheme.typography.h5)
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(8.dp)
+                    ) {
+                        Image(
+                            painter = painterResource(R.drawable.ic_baseline_add_24),
+                            contentDescription = null,
+                            Modifier.clip(RoundedCornerShape(20))
+                        )
+                    }
+                }
+                is ReceptsState.Loading -> {
+                    Text("Loading...", style = MaterialTheme.typography.body1)
+                }
+                is ReceptsState.Value -> {
+                    listState.recepts
+                        .forEach {
+                            ReceptCard(recept = it, onRemove = { orderId ->
+                                rm.showRemoveDialog(orderId)
+                            })
+                        }
+                }
+                is ReceptsState.ValueWithMessage -> {
+                    listState.recepts
+                        .forEach {
+                            ReceptCard(recept = it, onRemove = { receptId ->
+                                rm.showRemoveDialog(receptId)
+                            })
+                        }
+                }
+            }
+        }
+        FloatingActionButton(
+            modifier = Modifier.align(Alignment.BottomCenter),
+            onClick = {
+//                navController.popBackStack()
+                rm.toggleReceptDialog()
+            }) {
+            Icon(
+                contentDescription = null,
+                painter = painterResource(id = R.drawable.ic_baseline_construction_24),
+                tint = Color.White
+            )
+        }
+    }
+}
+
+@Composable
+fun CreateReceptDialog(rm: ReceptsViewModel) {
+    var addDish by remember { mutableStateOf("") }
+    var addIndigrients by remember { mutableStateOf("") }
+    Dialog(
+        onDismissRequest = {
+            rm.toggleReceptDialog()
+        })
+    {
+        Surface(
+            shape = RoundedCornerShape(4.dp),
+        )
+        {
+            Column(
+                modifier = Modifier
+                    .padding(top = 16.dp)
+                    .fillMaxWidth()
+            ) {
+                Text(
+                    text = "Добавьте рецепт",
+                    style = MaterialTheme.typography.h6,
+                    modifier = Modifier.padding(horizontal = 16.dp)
+                )
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(8.dp)
+                ) {}
+
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    TextField(
+                        value = addDish,
+                        { addDish = it },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(8.dp)
+                            .background(color = Color.Transparent),
+                        textStyle = MaterialTheme.typography.h6,
+                        placeholder = { Text("Наименование рецепта") }
+                    )
+                }
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(8.dp)
+                ) {}
+
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    TextField(
+                        value = addIndigrients,
+                        { addIndigrients = it},
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(8.dp)
+                            .background(color = Color.Transparent),
+                        textStyle = MaterialTheme.typography.h6,
+                        placeholder = { Text("Наименование ингредиентов") }
+                    )
+                }
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(8.dp)
+                ) {
+
+                    TextButton(onClick = { rm.toggleReceptDialog() }) {
+                        Text("Отмена", color = MaterialTheme.colors.secondary)
+                    }
+                    Spacer(modifier = Modifier.weight(1f))
+                    TextButton(
+                        onClick = {
+                            rm.addRecept(
+                                addDish = addDish,
+                                addIndigrients = addIndigrients
+                            )
+                        },
+                        enabled = addDish.isNotEmpty()
+                    )
+                    {
+                        Text("Добавить", color = MaterialTheme.colors.secondary)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun ConfirmReceptDialog(onDismiss: () -> Unit, onConfirmRemove: () -> Unit) {
+    AlertDialog(
+        title = {
+            Text(text = "Вы точно хотите удалить рецепт?")
+        },
+        confirmButton = {
+            TextButton(onClick = {
+                onConfirmRemove()
+            }) {
+                Text(text = "Удалить")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(text = "Отмена")
+            }
+        },
+        onDismissRequest = onDismiss
+    )
+}
+
+
+//    @Composable
+//    fun CreateReceptDialog(vm: ReceptsViewModel) {
+//    }

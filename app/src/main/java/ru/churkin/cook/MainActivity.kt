@@ -3,19 +3,27 @@ package ru.churkin.cook
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import androidx.activity.compose.setContent
-import androidx.activity.viewModels
+import androidx.annotation.DrawableRes
 import androidx.compose.foundation.layout.*
+import androidx.compose.material.*
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.navigation.NavDestination.Companion.hierarchy
+import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import ru.churkin.cook.home.*
 import ru.churkin.cook.recepts.ReceptsScreen
-import ru.churkin.cook.recepts.ReceptsScreenState
+
+val screens = listOf(
+    Screen.Home,
+    Screen.Recepts,
+)
 
 class MainActivity : AppCompatActivity() {
 
@@ -23,25 +31,43 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-
         setContent {
             val navController = rememberNavController()
             AppTheme {
-
-                Box(modifier = Modifier.fillMaxSize()) {
-//                    HomeScreen(state)
-
-                    NavHost(navController = navController, startDestination = "recepts") {
-                        composable("home") { HomeScreen(navController) }
-                        composable("recepts") { ReceptsScreen(navController) }
+                Scaffold(
+                    bottomBar = {
+                        BottomNavigation {
+                            val navBackStackEntry by navController.currentBackStackEntryAsState()
+                            val currentDestination = navBackStackEntry?.destination
+                            screens.forEach { screen ->
+                                BottomNavigationItem(
+                                    icon = { Icon(painterResource(id = screen.icon), contentDescription = null) },
+                                    label = { Text(screen.title, color = MaterialTheme.colors.onPrimary) },
+                                    selected = currentDestination?.hierarchy?.any { it.route == screen.route } == true,
+                                    onClick = {
+                                        navController.navigate(screen.route)
+                                    }
+                                )
+                            }
+                        }
                     }
-
+                ) { innerPadding ->
+                    NavHost(navController, startDestination = Screen.Home.route, Modifier.padding(innerPadding)) {
+                        composable(Screen.Home.route) { HomeScreen(navController) }
+                        composable(Screen.Recepts.route) { ReceptsScreen(navController) }
+                    }
                 }
+
             }
         }
     }
 
 
+}
+
+sealed class Screen(val route: String, @DrawableRes val icon: Int, val title:String) {
+    object Home : Screen("home", R.drawable.ic_baseline_cake_24, "Заказы")
+    object Recepts : Screen("recepts", R.drawable.ic_baseline_construction_24, "Рецепты")
 }
 
 

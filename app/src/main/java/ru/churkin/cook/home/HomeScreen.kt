@@ -27,224 +27,6 @@ import ru.churkin.cook.domain.Order
 import java.util.*
 
 @Composable
-fun HomeScreen(navController:NavController,  vm: HomeViewModel = viewModel()) {
-    val state by vm.screenState.collectAsState()
-    Box(modifier = Modifier.fillMaxSize()) {
-
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-        ) {
-            if (state.isOpenDialog) {
-                CreateOrderDialog(recepts = state.receptsName, vm)
-            }
-
-            if (state.isConfirm) {
-                ConfirmDialog(
-                    onDismiss = {
-                        vm.warningDialog()
-                    },
-                    onConfirmRemove = {
-                        vm.removeOrder()
-                    }
-                )
-            }
-
-            when (val listState = state.ordersState) {
-                is OrdersState.Empty -> {
-                    Text("Добавьте заказ", style = MaterialTheme.typography.h5)
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(8.dp)
-                    ) {
-                        Image(
-                            painter = painterResource(R.drawable.cake_start),
-                            contentDescription = null,
-                            Modifier.clip(RoundedCornerShape(20))
-                        )
-                    }
-                }
-                is OrdersState.Loading -> {
-                    Text("Loading...", style = MaterialTheme.typography.body1)
-                }
-                is OrdersState.Value -> {
-                    Log.e("UI", "${listState.orders}")
-                    listState.orders
-                        .forEach {
-                            OrderCard(order = it, onRemove = { orderId ->
-                                vm.showRemoveDialog(orderId)
-                            })
-                        }
-                }
-                is OrdersState.ValueWithMessage -> {
-                    listState.orders
-                        .forEach {
-                            OrderCard(order = it, onRemove = { orderId ->
-                                vm.showRemoveDialog(orderId)
-                            })
-                        }
-                    CircularProgressIndicator(
-                        color = MaterialTheme.colors.primary,
-                        strokeWidth = 5.dp
-                    )
-                }
-            }
-        }
-        FloatingActionButton(
-            modifier = Modifier.align(Alignment.BottomCenter),
-
-            onClick = {
-//                navController.popBackStack()
-                vm.toggleDialog()
-            }) {
-            Icon(
-                contentDescription = null,
-                painter = painterResource(id = R.drawable.ic_baseline_cake_24),
-                tint = Color.White
-            )
-        }
-    }
-}
-
-@Composable
-fun CreateOrderDialog(recepts: List<String>, vm: HomeViewModel) {
-
-    var selectedDishes: List<String> by remember { mutableStateOf(listOf()) }
-    var customer by remember { mutableStateOf("") }
-    var sliderValue by remember { mutableStateOf(0f) }
-
-    Dialog(
-        onDismissRequest = {
-            vm.toggleDialog()
-        })
-    {
-        Surface(
-            shape = RoundedCornerShape(4.dp),
-        )
-        {
-            Column(
-                modifier = Modifier
-                    .padding(top = 16.dp)
-                    .fillMaxWidth()
-            ) {
-                Text(
-                    text = "Выберите рецепт",
-                    style = MaterialTheme.typography.h6,
-                    modifier = Modifier.padding(horizontal = 16.dp)
-                )
-                Column(
-                    modifier = Modifier
-                        .height(220.dp)
-                        .verticalScroll(rememberScrollState())
-                ) {
-                    recepts.forEach { label ->
-                        val backgroundColor by animateColorAsState(
-                            if (selectedDishes.contains(label)) Color.Red
-                            else Color.Transparent
-                        )
-                        Row(
-                            verticalAlignment = CenterVertically,
-                            modifier = Modifier
-                                .clickable(onClick = {
-                                    if (selectedDishes.contains(label)) {
-//                                    val newList =  selectedDishes.toMutableList()
-//                                        newList.remove(label)
-//                                       selectedDishes = newList.toList()
-
-
-                                        selectedDishes
-                                            .toMutableList()
-                                            .also {
-                                                it.remove(label)
-                                                selectedDishes = it
-                                            }
-                                    } else {
-                                        selectedDishes
-                                            .toMutableList()
-                                            .also {
-                                                it.add(label)
-                                                selectedDishes = it
-                                            }
-                                    }
-                                    Log.e("HomeScreen", "$selectedDishes $label")
-                                })
-                                .background(color = backgroundColor)
-                                .height(44.dp)
-                                .padding(horizontal = 16.dp)
-                                .fillMaxWidth()
-                        ) {
-                            Text(text = label)
-                        }
-                    }
-                }
-
-
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(8.dp)
-                ) {}
-
-                Column(modifier = Modifier.fillMaxWidth()) {
-                    TextField(
-                        value = customer,
-                        { customer = it },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(8.dp)
-                            .background(color = Color.Transparent),
-                        textStyle = MaterialTheme.typography.h6,
-                        placeholder = { Text("ФИО заказчика") }
-                    )
-                }
-
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(8.dp)
-                ) {}
-
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Slider(
-                        value = sliderValue,
-                        valueRange = 0f..7f,
-                        steps = 6,
-                        modifier = Modifier.padding(8.dp),
-                        onValueChange = { sliderValue = it })
-                    Text("Дней до сдачи заказа ${sliderValue.toInt()}")
-                }
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(8.dp)
-                ) {
-
-                    TextButton(onClick = { vm.toggleDialog() }) {
-                        Text("Отмена", color = MaterialTheme.colors.secondary)
-                    }
-                    Spacer(modifier = Modifier.weight(1f))
-                    TextButton(
-                        onClick = {
-                            vm.addOrder(
-                                selectedDishes,
-                                customer = customer,
-                                deadLineOffset = sliderValue
-                            )
-                        },
-                        enabled = selectedDishes.isNotEmpty()
-                    )
-                    {
-                        Text("Добавить", color = MaterialTheme.colors.secondary)
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
 fun OrderCard(order: Order, modifier: Modifier = Modifier, onRemove: (orderId: Int) -> Unit) {
     Card(
         elevation = 4.dp,
@@ -308,6 +90,220 @@ fun OrderCard(order: Order, modifier: Modifier = Modifier, onRemove: (orderId: I
                     Text(
                         "ПОДРОБНЕЕ",
                     )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun HomeScreen(navController: NavController, vm: HomeViewModel = viewModel()) {
+    val state by vm.screenState.collectAsState()
+    Box(modifier = Modifier.fillMaxSize()) {
+
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+        ) {
+            if (state.isCreateDialog) {
+                CreateOrderDialog(recepts = state.receptsName,
+                    onDismiss = {
+                        vm.hideCreateDialog()
+                    },
+                    onCreate = { sel, cust, dead ->
+                        vm.addOrder(sel, cust, dead)
+                    })
+            }
+
+            if (state.isConfirmDialog) {
+                ConfirmDialog(
+                    onDismiss = {
+                        vm.hideConfirmDialog()
+                    },
+                    onConfirmRemove = {
+                        vm.removeOrder()
+                    }
+                )
+            }
+
+            when (val listState = state.ordersState) {
+                is OrdersState.Empty -> {
+                    Text("Добавьте заказ", style = MaterialTheme.typography.h5)
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(8.dp)
+                    ) {
+                        Image(
+                            painter = painterResource(R.drawable.cake_start),
+                            contentDescription = null,
+                            Modifier.clip(RoundedCornerShape(20))
+                        )
+                    }
+                }
+                is OrdersState.Loading -> {
+                    Text("Loading...", style = MaterialTheme.typography.body1)
+                }
+                is OrdersState.Value -> {
+                    Log.e("UI", "${listState.orders}")
+                    listState.orders
+                        .forEach {
+                            OrderCard(order = it, onRemove = { orderId ->
+                                vm.showConfirmDialog(orderId)
+                            })
+                        }
+                }
+                is OrdersState.ValueWithMessage -> {
+                    listState.orders
+                        .forEach {
+                            OrderCard(order = it, onRemove = { orderId ->
+                                vm.showConfirmDialog(orderId)
+                            })
+                        }
+                    CircularProgressIndicator(
+                        color = MaterialTheme.colors.primary,
+                        strokeWidth = 5.dp
+                    )
+                }
+            }
+        }
+
+        FloatingActionButton(
+            modifier = Modifier.align(Alignment.BottomCenter),
+            onClick = {
+//                navController.popBackStack()
+                vm.showCreateDialog()
+            }) {
+            Icon(
+                contentDescription = null,
+                painter = painterResource(id = R.drawable.ic_baseline_cake_24),
+                tint = Color.White
+            )
+        }
+    }
+}
+
+@Composable
+fun CreateOrderDialog(
+    recepts: List<String>,
+    onDismiss: () -> Unit,
+    onCreate: (selectedDishes: List<String>, customer: String, deadLineOffset: Float) -> Unit
+) {
+
+    var selectedDishes: List<String> by remember { mutableStateOf(listOf()) }
+    var customer by remember { mutableStateOf("") }
+    var sliderValue by remember { mutableStateOf(0f) }
+
+    Dialog(
+        onDismissRequest = onDismiss
+    )
+    {
+        Surface(
+            shape = RoundedCornerShape(4.dp),
+        )
+        {
+            Column(
+                modifier = Modifier
+                    .padding(top = 16.dp)
+                    .fillMaxWidth()
+            ) {
+                Text(
+                    text = "Выберите рецепт",
+                    style = MaterialTheme.typography.h6,
+                    modifier = Modifier.padding(horizontal = 16.dp)
+                )
+                Column(
+                    modifier = Modifier
+                        .height(220.dp)
+                        .verticalScroll(rememberScrollState())
+                ) {
+                    recepts.forEach { label ->
+                        val backgroundColor by animateColorAsState(
+                            if (selectedDishes.contains(label)) Color.Red
+                            else Color.Transparent
+                        )
+                        Row(
+                            verticalAlignment = CenterVertically,
+                            modifier = Modifier
+                                .clickable(onClick = {
+                                    if (selectedDishes.contains(label)) {
+
+                                        selectedDishes
+                                            .toMutableList()
+                                            .also {
+                                                it.remove(label)
+                                                selectedDishes = it
+                                            }
+                                    } else {
+                                        selectedDishes
+                                            .toMutableList()
+                                            .also {
+                                                it.add(label)
+                                                selectedDishes = it
+                                            }
+                                    }
+                                    Log.e("HomeScreen", "$selectedDishes $label")
+                                })
+                                .background(color = backgroundColor)
+                                .height(44.dp)
+                                .padding(horizontal = 16.dp)
+                                .fillMaxWidth()
+                        ) {
+                            Text(text = label)
+                        }
+                    }
+                }
+
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    TextField(
+                        value = customer,
+                        { customer = it },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(8.dp)
+                            .background(color = Color.Transparent),
+                        textStyle = MaterialTheme.typography.h6,
+                        placeholder = { Text("ФИО заказчика") }
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Slider(
+                        value = sliderValue,
+                        valueRange = 0f..7f,
+                        steps = 6,
+                        modifier = Modifier.padding(8.dp),
+                        onValueChange = { sliderValue = it })
+                    Text("Дней до сдачи заказа ${sliderValue.toInt()}")
+                }
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(8.dp)
+                ) {
+
+                    TextButton(onClick = onDismiss) {
+                        Text("Отмена", color = MaterialTheme.colors.secondary)
+                    }
+                    Spacer(modifier = Modifier.weight(1f))
+                    TextButton(
+                        onClick = {
+                            onCreate(
+                                selectedDishes,
+                                customer,
+                                sliderValue
+                            )
+                        },
+                        enabled = selectedDishes.isNotEmpty()
+                    ) {
+                        Text("Добавить", color = MaterialTheme.colors.secondary)
+                    }
                 }
             }
         }

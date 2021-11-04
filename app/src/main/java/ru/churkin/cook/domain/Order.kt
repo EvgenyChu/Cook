@@ -1,13 +1,23 @@
 package ru.churkin.cook.domain
 
-import ru.churkin.cook.home.Recept
+import kotlinx.serialization.KSerializer
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.Serializer
+import kotlinx.serialization.descriptors.PrimitiveKind
+import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
+import kotlinx.serialization.descriptors.SerialDescriptor
+import kotlinx.serialization.encoding.Decoder
+import kotlinx.serialization.encoding.Encoder
+import ru.churkin.cook.recepts.Recept
 import ru.churkin.cook.home.TimeUnits
 import ru.churkin.cook.home.add
 import java.util.*
 
+@Serializable
 data class Order(
     val id: Int,
     val dishes: List<String>,
+    @Serializable(with = DateSerializer::class)
     val deadline: Date,
     val profit: Int,
     val price: Int,
@@ -38,3 +48,22 @@ data class Order(
         }
     }
 }
+
+
+@Serializer(forClass = DateSerializer::class)
+object DateSerializer : KSerializer<Date> {
+
+    override fun serialize(output: Encoder, obj: Date) {
+        output.encodeString(obj.time.toString())
+    }
+
+    override fun deserialize(input: Decoder): Date {
+        return Date(input.decodeString().toLong())
+    }
+
+    override val descriptor: SerialDescriptor
+        get() = PrimitiveSerialDescriptor("Date", PrimitiveKind.STRING)
+}
+
+
+
