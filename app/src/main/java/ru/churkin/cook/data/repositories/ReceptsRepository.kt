@@ -21,7 +21,7 @@ class ReceptsRepository {
         recepts.addAll(prefs.loadRecepts())
     }
 
-
+    fun loadIngridients() = prefs.loadIngridients()
     fun loadRecepts(): List<Recept> = recepts
     fun insertRecept(recept: Recept) {
 //        if (recepts.find { it.id == recept.id } != null) return

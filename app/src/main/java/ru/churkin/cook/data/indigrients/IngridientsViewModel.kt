@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import ru.churkin.cook.data.repositories.IngridientsRepository
 import ru.churkin.cook.domain.Ingridient
+import java.util.*
 
 class IngridientsViewModel() : ViewModel() {
 
@@ -27,11 +28,16 @@ class IngridientsViewModel() : ViewModel() {
             currentState.copy(isConfirm = true, ingridientsIdForRemove = ingridientIdForRemove)
     }
 
-    fun addIngridient(title: String, costPrice: Int, avaliable: Int) {
-        val ingridient = Ingridient.makeIngridient(title = title, costPrice = costPrice)
+    fun addIngridient(title: String, costPrice: Int, avaliable: Int, buyAt: Date) {
+        val ingridient = Ingridient.makeIngridient(
+            title = title,
+            costPrice = costPrice,
+            avaliable = avaliable,
+            buyAt = buyAt
+        )
         repository.insertIngridient(ingridient)
         val ingridients = repository.loadIngridients().sortedBy { it.title }
-        val newTitle = if (ingridients.size > 1) "Рецепты" else "Рецепт"
+        val newTitle = if (ingridients.size > 1) "Ингридиенты" else "Ингридиент"
         screenState.value = currentState.copy(
             title = newTitle,
             ingridientsState = IngridientsState.Value(ingridients),

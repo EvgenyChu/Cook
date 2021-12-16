@@ -85,6 +85,12 @@ fun Date.add(value: Int, units: TimeUnits = TimeUnits.SECOND): Date {
     return this
 }
 
-fun Date.format(pattern: String = "dd:MM:yy"): String {
+fun Date.format(pattern: String = "dd.MM.yyyy"): String {
     val dateFormat = SimpleDateFormat(pattern, Locale("ru"))
     return dateFormat.format(this)}
+
+
+fun String.parseDate(pattern :String = "dd.MM.yyyy"): Date{
+    return SimpleDateFormat(pattern).parse(this)
+}
+

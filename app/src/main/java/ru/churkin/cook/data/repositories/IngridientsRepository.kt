@@ -17,6 +17,9 @@ class IngridientsRepository {
 
     fun loadIngridients(): List<Ingridient> = ingridients
     fun insertIngridient(indigrient: Ingridient) {
+        val newInd = ingridients.size+1
+        ingridients.add(indigrient.copy(id = newInd))
+        prefs.insertIngridient(indigrient)
     }
 
     fun removeIngridient(id: Int?) {

@@ -1,5 +1,7 @@
 package ru.churkin.cook.recepts
 
+import android.util.Log
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -73,7 +75,7 @@ fun ReceptsScreen(navController: NavController, vm: ReceptsViewModel = viewModel
     val state by vm.screenState.collectAsState()
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
-            verticalArrangement = Arrangement.Center,
+            verticalArrangement = Arrangement.Bottom,
             horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier
                 .fillMaxSize()
@@ -82,10 +84,10 @@ fun ReceptsScreen(navController: NavController, vm: ReceptsViewModel = viewModel
             Text(state.title)
 
             if (state.isCreateDialog) {
-                CreateReceptDialog(onDismiss = {vm.hideCreateDialog()}, onCreate = {dish, ing ->vm.addRecept(dish, ing)})
+                CreateReceptDialog(ingridients = state.ingridientsName, onDismiss = {vm.hideCreateDialog()}, onCreate = {dish, ing ->vm.addRecept(dish, ing)})
             }
 
-            /*if (state.isConfirm) {
+            if (state.isConfirm) {
                 ConfirmReceptDialog(
                     onDismiss = {
                         vm.warningDialog()
@@ -94,7 +96,7 @@ fun ReceptsScreen(navController: NavController, vm: ReceptsViewModel = viewModel
                         vm.removeRecept()
                     }
                 )
-            }*/
+            }
 
             when (val listState = state.receptsState) {
                 is ReceptsState.Empty -> {
@@ -145,14 +147,15 @@ fun ReceptsScreen(navController: NavController, vm: ReceptsViewModel = viewModel
         }
     }
 }
-
 @Composable
 fun CreateReceptDialog(
+    ingridients: List<String>,
     onDismiss: () -> Unit,
-    onCreate: (addDish: String, addIndigrients: String) -> Unit
+    onCreate: (addDish: String, addRecepts: String) -> Unit
 ) {
+    var selectedDishes: List<String> by remember { mutableStateOf(listOf()) }
     var addDish by remember { mutableStateOf("") }
-    var addIndigrients by remember { mutableStateOf("") }
+    var addRecepts by remember { mutableStateOf("") }
     Dialog(onDismissRequest = onDismiss) {
         Surface(
             shape = RoundedCornerShape(4.dp),
@@ -185,17 +188,45 @@ fun CreateReceptDialog(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                Column(modifier = Modifier.fillMaxWidth()) {
-                    TextField(
-                        value = addIndigrients,
-                        { addIndigrients = it },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(8.dp)
-                            .background(color = Color.Transparent),
-                        textStyle = MaterialTheme.typography.h6,
-                        placeholder = { Text("Наименование ингредиентов") }
-                    )
+                Column(
+                    modifier = Modifier
+                        .height(220.dp)
+                        .verticalScroll(rememberScrollState())
+                ) {
+                    ingridients.forEach { label ->
+                        val backgroundColor by animateColorAsState(
+                            if (selectedDishes.contains(label)) Color.Red
+                            else Color.Transparent
+                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .clickable(onClick = {
+                                    if (selectedDishes.contains(label)) {
+
+                                        selectedDishes
+                                            .toMutableList()
+                                            .also {
+                                                it.remove(label)
+                                                selectedDishes = it
+                                            }
+                                    } else {
+                                        selectedDishes
+                                            .toMutableList()
+                                            .also {
+                                                it.add(label)
+                                                selectedDishes = it
+                                            }
+                                    }
+                                })
+                                .background(color = backgroundColor)
+                                .height(44.dp)
+                                .padding(horizontal = 16.dp)
+                                .fillMaxWidth()
+                        ) {
+                            Text(text = label)
+                        }
+                    }
                 }
                 Row(
                     modifier = Modifier
@@ -211,7 +242,7 @@ fun CreateReceptDialog(
                         onClick = {
                             onCreate(
                                 addDish,
-                                addIndigrients
+                                addRecepts
                             )
                         },
                         enabled = addDish.isNotEmpty()
@@ -224,6 +255,7 @@ fun CreateReceptDialog(
         }
     }
 }
+
 
 @Composable
 fun ConfirmReceptDialog(onDismiss: () -> Unit, onConfirmRemove: () -> Unit) {

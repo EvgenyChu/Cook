@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.serialization.Serializable
 import ru.churkin.cook.data.repositories.ReceptsRepository
+import ru.churkin.cook.home.OrdersState
 
 class ReceptsViewModel() : ViewModel() {
 
@@ -28,8 +29,12 @@ class ReceptsViewModel() : ViewModel() {
 
 
     private fun initialState(): ReceptsScreenState {
+        val recepts = repository.loadRecepts()
+        val receptsState = if (recepts.isEmpty()) ReceptsState.Empty
+        else ReceptsState.Value(recepts = recepts.sortedBy { it.dish })
 
         return ReceptsScreenState(
+            ingridientsName = repository.loadIngridients().map { it.title },
             receptsState = ReceptsState.Value(repository.loadRecepts()),
             recepts = emptyList(),
             title = "Список рецептов"
@@ -52,13 +57,14 @@ class ReceptsViewModel() : ViewModel() {
         screenState.value = currentState.copy(isCreateDialog = true)
     }
 
+
     fun showRemoveDialog(receptIdForRemove: Int?) {
         screenState.value =
             currentState.copy(isConfirm = true, receptIdForRemove = receptIdForRemove)
     }
 
-    fun addRecept(addDish: String, addIndigrients: String) {
-        val recept = Recept.makeRecept(addDish = addDish, addIndigrients = addIndigrients)
+    fun addRecept(addDish: String, addRecepts: String) {
+        val recept = Recept.makeRecept(addDish = addDish, addRecepts = addRecepts)
         Log.e("ReceptsViewModel", "new rec $recept")
         repository.insertRecept(recept)
         val recepts = repository.loadRecepts().sortedBy { it.id }
@@ -94,6 +100,7 @@ class ReceptsViewModel() : ViewModel() {
 data class ReceptsScreenState(
     val title: String = "Рецепты",
     val recepts: List<Recept>,
+    val ingridientsName: List<String>,
     val receptsState: ReceptsState = ReceptsState.Empty,
     val isCreateDialog: Boolean = false,
     val isConfirm: Boolean = false,
@@ -119,13 +126,13 @@ data class Recept(
     companion object Factory {
         private var lastId: Int = 6
 
-        fun makeRecept(addDish: String, addIndigrients: String): Recept {
+        fun makeRecept(addDish: String, addRecepts: String): Recept {
             lastId += 1
 
             return Recept(
                 id = lastId,
                 dish = addDish,
-                indigrients = addIndigrients,
+                indigrients = addRecepts,
                 costPrice = 0
             )
         }

@@ -16,13 +16,15 @@ data class Ingridient(
 
         private var lastId: Int = -1
 
-        fun makeIngridient(title: String, costPrice: Int): Ingridient {
+        fun makeIngridient(title: String, costPrice: Int, avaliable: Int, buyAt: Date): Ingridient {
             lastId += 1
 
             return Ingridient(
                 id = lastId,
                 title = title,
-                costPrice = costPrice
+                costPrice = costPrice,
+                avaliable = avaliable,
+                buyAt = Date()
             )
         }
     }
